@@ -1,0 +1,3 @@
+[submodule "android/video-mobile-player"]
+	path = android/video-mobile-player
+	url = https://github.com/onyou668/video-mobile-player.git

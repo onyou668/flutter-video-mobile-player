@@ -1,0 +1,144 @@
+# video_mobile_player
+
+Flutter Android 视频播放器插件，底层复用 `video-mobile-player` 的 Media3、IjkPlayer、Jetpack Compose UI 和展示模式控制。
+
+当前只支持 Android。播放器源码通过 Git submodule 固定在 `android/video-mobile-player`。
+
+## 获取源码
+
+```shell
+git clone --recurse-submodules https://github.com/onyou668/flutter-video-mobile-player.git
+```
+
+已有仓库需要初始化：
+
+```shell
+git submodule update --init --recursive
+```
+
+## 使用
+
+```yaml
+dependencies:
+  video_mobile_player:
+    git:
+      url: https://github.com/onyou668/flutter-video-mobile-player.git
+```
+
+直接使用 Git dependency 时，Dart Pub 不保证自动初始化 submodule。正式使用建议先发布包含已检出 submodule 内容的 pub 包，或将仓库作为本地 path dependency 使用。
+
+```dart
+final controller = VideoMobilePlayerController();
+
+const source = VideoPlayerSource.network(
+  'https://example.com/video.mp4',
+  headers: <String, String>{'Authorization': 'Bearer token'},
+  title: 'Video',
+);
+
+AspectRatio(
+  aspectRatio: 16 / 9,
+  child: VideoMobilePlayer(
+    controller: controller,
+    source: source,
+    initialEngine: VideoPlayerEngine.media3,
+    startupMode: VideoPresentationMode.inline,
+  ),
+)
+```
+
+本地视频使用系统选择器返回的 `content://` URI：
+
+```dart
+final source = VideoPlayerSource.local(uri.toString(), title: 'Local video');
+```
+
+## 控制
+
+```dart
+await controller.play();
+await controller.pause();
+await controller.seekTo(const Duration(seconds: 30));
+await controller.seekBy(const Duration(seconds: 10));
+await controller.setVolume(0.5);
+await controller.setPlaybackSpeed(1.5);
+await controller.switchEngine(VideoPlayerEngine.ijk);
+await controller.requestMode(VideoPresentationMode.fullscreen);
+await controller.requestMode(VideoPresentationMode.floating);
+await controller.returnFromFloating();
+```
+
+订阅统一状态：
+
+```dart
+controller.states.listen((state) {
+  print(state.position);
+  print(state.networkSpeedBytesPerSecond);
+});
+
+controller.presentationStates.listen((state) {
+  print(state.currentMode);
+  print(state.floatingReturnMode);
+});
+```
+
+Widget 销毁后由业务释放 Dart Controller：
+
+```dart
+@override
+void dispose() {
+  controller.dispose();
+  super.dispose();
+}
+```
+
+## 扩展
+
+弹幕、字幕、手势层等业务 UI 建议作为 `VideoMobilePlayer` 上方的 Flutter 覆盖层实现，不需要修改播放器内核：
+
+```dart
+Stack(
+  children: [
+    VideoMobilePlayer(controller: controller, source: source),
+    Positioned.fill(child: DanmakuOverlay(controller: danmakuController)),
+  ],
+)
+```
+
+通过 `controller.states` 的 `position`、`status` 和 `isPlaying` 驱动覆盖层同步。需要扩展原生 Compose 控制栏、播放内核或展示模式时，在 `android/video-mobile-player` 主库中实现并更新 submodule 指针；Dart 层只负责稳定的命令和状态协议，避免业务 UI 与 Media3/IjkPlayer 直接耦合。
+
+## PiP
+
+宿主 Activity 需要声明：
+
+```xml
+<activity
+    android:name=".MainActivity"
+    android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+    android:resizeableActivity="true"
+    android:supportsPictureInPicture="true" />
+```
+
+系统 PiP 被点击展开后，业务可以同步返回目标模式：
+
+```dart
+final presentation = await controller.currentPresentationState();
+await controller.syncPresentationMode(presentation.floatingReturnMode);
+```
+
+## 更新底层播放器
+
+```shell
+git submodule update --remote android/video-mobile-player
+git add android/video-mobile-player
+git commit -m "chore: update native player"
+```
+
+每次更新后执行：
+
+```shell
+flutter analyze
+flutter test
+cd example
+flutter build apk --debug
+```

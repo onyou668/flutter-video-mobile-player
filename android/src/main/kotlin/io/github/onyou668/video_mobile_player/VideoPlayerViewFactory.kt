@@ -1,0 +1,28 @@
+package io.github.onyou668.video_mobile_player
+
+import android.app.Activity
+import android.content.Context
+import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.StandardMessageCodec
+import io.flutter.plugin.platform.PlatformView
+import io.flutter.plugin.platform.PlatformViewFactory
+
+internal class VideoPlayerViewFactory(
+    private val messenger: BinaryMessenger,
+    private val activityProvider: () -> Activity?,
+) : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
+    override fun create(context: Context, viewId: Int, args: Any?): PlatformView =
+        VideoPlayerPlatformView(
+            context = context,
+            viewId = viewId,
+            creationParams = args.asStringMap(),
+            messenger = messenger,
+            activityProvider = activityProvider,
+        )
+}
+
+internal fun Any?.asStringMap(): Map<String, Any?> =
+    (this as? Map<*, *>)
+        ?.entries
+        ?.associate { (key, value) -> key.toString() to value }
+        .orEmpty()
