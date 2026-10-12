@@ -4,7 +4,7 @@ Flutter Android 视频播放器插件，底层复用 `video-mobile-player` 的 M
 
 当前只支持 Android。播放器源码通过 Git submodule 固定在 `android/video-mobile-player`。
 
-插件 `v0.1.0` 固定使用 Android 播放器主库 `v0.1.0`。调用方只需要依赖本插件 tag，不需要直接管理底层主库版本。
+插件 `v0.2.0` 固定使用 Android 播放器主库 `v0.2.0`。调用方只需要依赖本插件 tag，不需要直接管理底层主库版本。
 
 ## 获取源码
 
@@ -25,7 +25,7 @@ dependencies:
   video_mobile_player:
     git:
       url: https://github.com/onyou668/flutter-video-mobile-player.git
-      ref: v0.1.0
+      ref: v0.2.0
 ```
 
 直接使用 Git dependency 时，Dart Pub 不保证自动初始化 submodule。正式使用建议先发布包含已检出 submodule 内容的 pub 包，或将仓库作为本地 path dependency 使用。
@@ -52,6 +52,8 @@ AspectRatio(
   ),
 )
 ```
+
+`VideoMobilePlayer` 只是可嵌入的播放器 Widget；详情、剧集、评论和推荐等页面内容始终由 Flutter 宿主实现。宿主可通过同一 `VideoMobilePlayerController` 切换地址、内核和展示模式，播放进度不依赖业务页面。
 
 本地视频使用系统选择器返回的 `content://` URI：
 
