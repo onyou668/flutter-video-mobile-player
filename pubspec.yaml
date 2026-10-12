@@ -1,6 +1,6 @@
 name: video_mobile_player
 description: Android video player plugin backed by Media3 and IjkPlayer with Compose controls.
-version: 0.0.1
+version: 0.1.0
 homepage: https://github.com/onyou668/flutter-video-mobile-player
 repository: https://github.com/onyou668/flutter-video-mobile-player
 
