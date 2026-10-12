@@ -6,10 +6,12 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
+import io.github.mobileplayer.core.VideoPlayerCache
 
 internal class VideoPlayerViewFactory(
     private val messenger: BinaryMessenger,
     private val activityProvider: () -> Activity?,
+    private val cache: VideoPlayerCache,
 ) : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
     override fun create(context: Context, viewId: Int, args: Any?): PlatformView =
         VideoPlayerPlatformView(
@@ -18,6 +20,7 @@ internal class VideoPlayerViewFactory(
             creationParams = args.asStringMap(),
             messenger = messenger,
             activityProvider = activityProvider,
+            cache = cache,
         )
 }
 

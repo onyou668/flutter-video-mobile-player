@@ -32,6 +32,7 @@ final controller = VideoMobilePlayerController();
 
 const source = VideoPlayerSource.network(
   'https://example.com/video.mp4',
+  mediaId: 'movie-42',
   headers: <String, String>{'Authorization': 'Bearer token'},
   title: 'Video',
 );
@@ -41,6 +42,8 @@ AspectRatio(
   child: VideoMobilePlayer(
     controller: controller,
     source: source,
+    // 非空时优先于本地保存的进度；传 Duration.zero 强制从头播放。
+    startPosition: const Duration(minutes: 10),
     initialEngine: VideoPlayerEngine.media3,
     startupMode: VideoPresentationMode.inline,
   ),
@@ -53,6 +56,20 @@ AspectRatio(
 final source = VideoPlayerSource.local(uri.toString(), title: 'Local video');
 ```
 
+`mediaId` 是播放进度和视频内容缓存的稳定标识；不传时使用 URI。本地文件只保存进度，不复制视频内容。网络 MP4 等支持 HTTP Range 的渐进式文件会自动边播边缓存，拖动到新位置时只下载对应分段，Media3/Ijk 切换时共用同一份状态和缓存。App 数据清除或卸载后这些数据会被系统删除。
+
+HLS/DASH 不缓存媒体内容。标准 `.m3u8`/`.mpd` URL 会自动绕过；无标准扩展名时显式关闭：
+
+```dart
+const live = VideoPlayerSource.network(
+  'https://example.com/opaque-live-url',
+  mediaId: 'live-channel-1',
+  contentCachePolicy: VideoContentCachePolicy.disabled,
+);
+```
+
+目标 SDK 禁止明文流量时，宿主需要在 Android Network Security Config 中仅允许 `127.0.0.1`/`localhost`，供本地 Range 代理使用；不要全局开放 HTTP。完整配置见底层播放器 [README](android/video-mobile-player/README.md)。
+
 ## 控制
 
 ```dart
@@ -60,6 +77,10 @@ await controller.play();
 await controller.pause();
 await controller.seekTo(const Duration(seconds: 30));
 await controller.seekBy(const Duration(seconds: 10));
+await controller.setSource(
+  source,
+  startPosition: const Duration(minutes: 10),
+);
 await controller.setVolume(0.5);
 await controller.setPlaybackSpeed(1.5);
 await controller.switchEngine(VideoPlayerEngine.ijk);

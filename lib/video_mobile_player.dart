@@ -10,28 +10,37 @@ enum VideoPresentationMode { inline, fullscreen, floating }
 
 enum VideoPlaybackStatus { idle, preparing, ready, buffering, ended, error }
 
+enum VideoContentCachePolicy { auto, disabled }
+
 @immutable
 class VideoPlayerSource {
   const VideoPlayerSource.network(
     this.uri, {
     this.headers = const <String, String>{},
     this.title,
+    this.mediaId,
+    this.contentCachePolicy = VideoContentCachePolicy.auto,
   }) : isLocal = false;
 
-  const VideoPlayerSource.local(this.uri, {this.title})
+  const VideoPlayerSource.local(this.uri, {this.title, this.mediaId})
     : isLocal = true,
-      headers = const <String, String>{};
+      headers = const <String, String>{},
+      contentCachePolicy = VideoContentCachePolicy.disabled;
 
   final String uri;
   final bool isLocal;
   final Map<String, String> headers;
   final String? title;
+  final String? mediaId;
+  final VideoContentCachePolicy contentCachePolicy;
 
   Map<String, Object?> toMap() => <String, Object?>{
     'uri': uri,
     'sourceType': isLocal ? 'local' : 'network',
     'headers': headers,
     'title': title,
+    'mediaId': mediaId,
+    'contentCachePolicy': contentCachePolicy.name,
   };
 
   @override
@@ -40,11 +49,19 @@ class VideoPlayerSource {
       uri == other.uri &&
       isLocal == other.isLocal &&
       title == other.title &&
+      mediaId == other.mediaId &&
+      contentCachePolicy == other.contentCachePolicy &&
       mapEquals(headers, other.headers);
 
   @override
-  int get hashCode =>
-      Object.hash(uri, isLocal, title, Object.hashAll(headers.entries));
+  int get hashCode => Object.hash(
+    uri,
+    isLocal,
+    title,
+    mediaId,
+    contentCachePolicy,
+    Object.hashAll(headers.entries),
+  );
 }
 
 @immutable
@@ -170,11 +187,15 @@ class VideoMobilePlayerController {
   Future<void> switchEngine(VideoPlayerEngine engine) =>
       _invoke('switchEngine', <String, Object>{'engine': engine.name});
 
-  Future<void> setSource(VideoPlayerSource source, {bool autoPlay = true}) =>
-      _invoke('setSource', <String, Object?>{
-        ...source.toMap(),
-        'autoPlay': autoPlay,
-      });
+  Future<void> setSource(
+    VideoPlayerSource source, {
+    bool autoPlay = true,
+    Duration? startPosition,
+  }) => _invoke('setSource', <String, Object?>{
+    ...source.toMap(),
+    'autoPlay': autoPlay,
+    'startPositionMs': startPosition?.inMilliseconds,
+  });
 
   Future<bool> requestMode(VideoPresentationMode mode) async =>
       await _invoke<bool>('requestMode', <String, Object>{'mode': mode.name}) ??
@@ -253,6 +274,7 @@ class VideoMobilePlayer extends StatefulWidget {
     required this.source,
     required this.controller,
     this.autoPlay = true,
+    this.startPosition,
     this.initialEngine = VideoPlayerEngine.media3,
     this.startupMode = VideoPresentationMode.inline,
     this.showEngineSwitcher = true,
@@ -264,6 +286,7 @@ class VideoMobilePlayer extends StatefulWidget {
   final VideoPlayerSource source;
   final VideoMobilePlayerController controller;
   final bool autoPlay;
+  final Duration? startPosition;
   final VideoPlayerEngine initialEngine;
   final VideoPresentationMode startupMode;
   final bool showEngineSwitcher;
@@ -279,8 +302,13 @@ class _VideoMobilePlayerState extends State<VideoMobilePlayer> {
   void didUpdateWidget(VideoMobilePlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source ||
-        oldWidget.autoPlay != widget.autoPlay) {
-      widget.controller.setSource(widget.source, autoPlay: widget.autoPlay);
+        oldWidget.autoPlay != widget.autoPlay ||
+        oldWidget.startPosition != widget.startPosition) {
+      widget.controller.setSource(
+        widget.source,
+        autoPlay: widget.autoPlay,
+        startPosition: widget.startPosition,
+      );
     }
   }
 
@@ -299,6 +327,7 @@ class _VideoMobilePlayerState extends State<VideoMobilePlayer> {
       creationParams: <String, Object?>{
         ...widget.source.toMap(),
         'autoPlay': widget.autoPlay,
+        'startPositionMs': widget.startPosition?.inMilliseconds,
         'engine': widget.initialEngine.name,
         'startupMode': widget.startupMode.name,
         'showEngineSwitcher': widget.showEngineSwitcher,

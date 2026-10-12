@@ -22,6 +22,7 @@ import io.github.mobileplayer.core.PlayerPresentationMode
 import io.github.mobileplayer.core.PlayerPresentationRequest
 import io.github.mobileplayer.core.PlayerPresentationState
 import io.github.mobileplayer.core.VideoSource
+import io.github.mobileplayer.core.VideoPlayerCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,6 +36,7 @@ internal class VideoPlayerPlatformView(
     creationParams: Map<String, Any?>,
     messenger: BinaryMessenger,
     private val activityProvider: () -> Activity?,
+    cache: VideoPlayerCache,
 ) : PlatformView, MethodChannel.MethodCallHandler {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val channel = MethodChannel(messenger, "video_mobile_player/view_$viewId")
@@ -42,6 +44,7 @@ internal class VideoPlayerPlatformView(
         context = context,
         scope = scope,
         initialEngine = creationParams.engineType(),
+        cache = cache,
     )
     private val presentation = PlayerPresentationController(
         startupMode = creationParams.presentationMode(),
@@ -60,7 +63,11 @@ internal class VideoPlayerPlatformView(
     init {
         channel.setMethodCallHandler(this)
         creationParams.source()?.let { source ->
-            player.setMedia(source, playWhenReady = creationParams["autoPlay"] as? Boolean ?: true)
+            player.setMedia(
+                source = source,
+                playWhenReady = creationParams["autoPlay"] as? Boolean ?: true,
+                startPositionMs = creationParams.optionalLong("startPositionMs"),
+            )
         }
         observeState()
         handlePresentationRequests()
@@ -75,6 +82,7 @@ internal class VideoPlayerPlatformView(
                     source = call.arguments.asStringMap().source()
                         ?: error("setSource requires a non-empty uri"),
                     playWhenReady = call.argument<Boolean>("autoPlay") ?: true,
+                    startPositionMs = call.optionalLongArgument("startPositionMs"),
                 )
                 "play" -> player.play()
                 "pause" -> player.pause()
@@ -169,16 +177,30 @@ private fun Map<String, Any?>.source(): VideoSource? {
     val uri = this["uri"] as? String ?: return null
     if (uri.isBlank()) return null
     val title = this["title"] as? String
+    val mediaId = (this["mediaId"] as? String)?.takeIf(String::isNotBlank) ?: uri
     val headers = (this["headers"] as? Map<*, *>)
         ?.entries
         ?.associate { (key, value) -> key.toString() to value.toString() }
         .orEmpty()
     return if (this["sourceType"] == "local") {
-        VideoSource.local(uri, title)
+        VideoSource.local(uri = uri, title = title, mediaId = mediaId)
     } else {
-        VideoSource.network(uri, headers, title)
+        VideoSource.network(
+            url = uri,
+            headers = headers,
+            title = title,
+            mediaId = mediaId,
+            contentCachePolicy = if (this["contentCachePolicy"] == "disabled") {
+                VideoSource.ContentCachePolicy.DISABLED
+            } else {
+                VideoSource.ContentCachePolicy.AUTO
+            },
+        )
     }
 }
+
+private fun Map<String, Any?>.optionalLong(name: String): Long? =
+    (this[name] as? Number)?.toLong()
 
 private fun Map<String, Any?>.engineType(): PlayerEngineType =
     (this["engine"] as? String).toEngineType()
@@ -203,6 +225,9 @@ private fun Map<String, Any?>.uiConfig(): VideoPlayerUiConfig = VideoPlayerUiCon
 
 private fun MethodCall.longArgument(name: String): Long =
     (argument<Number>(name) ?: error("$name is required")).toLong()
+
+private fun MethodCall.optionalLongArgument(name: String): Long? =
+    argument<Number>(name)?.toLong()
 
 private fun MethodCall.numberArgument(name: String): Number =
     argument<Number>(name) ?: error("$name is required")

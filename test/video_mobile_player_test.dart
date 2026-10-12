@@ -29,11 +29,14 @@ void main() {
       'https://example.com/video.mp4',
       headers: <String, String>{'Authorization': 'token'},
       title: 'Video',
+      mediaId: 'movie-42',
     );
 
     expect(source.toMap()['sourceType'], 'network');
     expect(source.toMap()['headers'], <String, String>{
       'Authorization': 'token',
     });
+    expect(source.toMap()['mediaId'], 'movie-42');
+    expect(source.toMap()['contentCachePolicy'], 'auto');
   });
 }
