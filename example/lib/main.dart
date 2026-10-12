@@ -30,10 +30,7 @@ class _PlayerExampleAppState extends State<PlayerExampleApp> {
       appBar: AppBar(title: const Text('Video Mobile Player')),
       body: Column(
         children: <Widget>[
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: VideoMobilePlayer(controller: controller, source: source),
-          ),
+          VideoMobilePlayer(controller: controller, source: source),
           StreamBuilder<VideoPlayerState>(
             stream: controller.states,
             builder: (context, snapshot) {

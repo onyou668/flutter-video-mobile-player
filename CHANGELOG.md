@@ -1,3 +1,9 @@
+## 0.3.0
+
+* Generate stable media identity and restore playback progress inside the Android player.
+* Remove caller-supplied media IDs and start positions from the Dart interface.
+* Give the embedded player a configurable 16:9 adaptive aspect ratio by default.
+
 ## 0.2.0
 
 * Pin the Android player submodule to `v0.2.0`.

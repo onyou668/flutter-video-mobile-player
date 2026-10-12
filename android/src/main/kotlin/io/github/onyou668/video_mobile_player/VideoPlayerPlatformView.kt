@@ -66,7 +66,6 @@ internal class VideoPlayerPlatformView(
             player.setMedia(
                 source = source,
                 playWhenReady = creationParams["autoPlay"] as? Boolean ?: true,
-                startPositionMs = creationParams.optionalLong("startPositionMs"),
             )
         }
         observeState()
@@ -82,7 +81,6 @@ internal class VideoPlayerPlatformView(
                     source = call.arguments.asStringMap().source()
                         ?: error("setSource requires a non-empty uri"),
                     playWhenReady = call.argument<Boolean>("autoPlay") ?: true,
-                    startPositionMs = call.optionalLongArgument("startPositionMs"),
                 )
                 "play" -> player.play()
                 "pause" -> player.pause()
@@ -177,19 +175,17 @@ private fun Map<String, Any?>.source(): VideoSource? {
     val uri = this["uri"] as? String ?: return null
     if (uri.isBlank()) return null
     val title = this["title"] as? String
-    val mediaId = (this["mediaId"] as? String)?.takeIf(String::isNotBlank) ?: uri
     val headers = (this["headers"] as? Map<*, *>)
         ?.entries
         ?.associate { (key, value) -> key.toString() to value.toString() }
         .orEmpty()
     return if (this["sourceType"] == "local") {
-        VideoSource.local(uri = uri, title = title, mediaId = mediaId)
+        VideoSource.local(uri = uri, title = title)
     } else {
         VideoSource.network(
             url = uri,
             headers = headers,
             title = title,
-            mediaId = mediaId,
             contentCachePolicy = if (this["contentCachePolicy"] == "disabled") {
                 VideoSource.ContentCachePolicy.DISABLED
             } else {
@@ -198,9 +194,6 @@ private fun Map<String, Any?>.source(): VideoSource? {
         )
     }
 }
-
-private fun Map<String, Any?>.optionalLong(name: String): Long? =
-    (this[name] as? Number)?.toLong()
 
 private fun Map<String, Any?>.engineType(): PlayerEngineType =
     (this["engine"] as? String).toEngineType()
@@ -225,9 +218,6 @@ private fun Map<String, Any?>.uiConfig(): VideoPlayerUiConfig = VideoPlayerUiCon
 
 private fun MethodCall.longArgument(name: String): Long =
     (argument<Number>(name) ?: error("$name is required")).toLong()
-
-private fun MethodCall.optionalLongArgument(name: String): Long? =
-    argument<Number>(name)?.toLong()
 
 private fun MethodCall.numberArgument(name: String): Number =
     argument<Number>(name) ?: error("$name is required")
