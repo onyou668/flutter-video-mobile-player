@@ -338,7 +338,7 @@ class _VideoMobilePlayerState extends State<VideoMobilePlayer> {
           hitTestBehavior: PlatformViewHitTestBehavior.opaque,
         ),
         onCreatePlatformView: (params) {
-          final controller = PlatformViewsService.initExpensiveAndroidView(
+          final controller = PlatformViewsService.initSurfaceAndroidView(
             id: params.id,
             viewType: params.viewType,
             layoutDirection: TextDirection.ltr,

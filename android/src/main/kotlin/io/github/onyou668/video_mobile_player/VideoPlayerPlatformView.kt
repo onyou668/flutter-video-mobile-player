@@ -3,6 +3,7 @@ package io.github.onyou668.video_mobile_player
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.os.Bundle
 import android.os.Build
 import android.view.View
 import androidx.compose.runtime.Recomposer
@@ -47,11 +48,7 @@ internal class VideoPlayerPlatformView(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     // Keep AndroidUiDispatcher last so its dispatcher and frame clock are retained.
     private val recomposer = Recomposer(scope.coroutineContext + AndroidUiDispatcher.Main)
-    private val lifecycleOwner = object : SavedStateRegistryOwner {
-        override val lifecycle = LifecycleRegistry(this)
-        private val savedStateController = SavedStateRegistryController.create(this)
-        override val savedStateRegistry get() = savedStateController.savedStateRegistry
-    }
+    private val lifecycleOwner = PlatformViewLifecycleOwner()
     private val channel = MethodChannel(messenger, "video_mobile_player/view_$viewId")
     private val player: VideoPlayerController = createDefaultVideoPlayerController(
         context = context,
@@ -81,7 +78,6 @@ internal class VideoPlayerPlatformView(
     }
 
     init {
-        lifecycleOwner.lifecycle.currentState = Lifecycle.State.RESUMED
         scope.launch(AndroidUiDispatcher.Main) { recomposer.runRecomposeAndApplyChanges() }
         channel.setMethodCallHandler(this)
         creationParams.source()?.let { source ->
@@ -136,7 +132,7 @@ internal class VideoPlayerPlatformView(
 
     override fun dispose() {
         closed = true
-        lifecycleOwner.lifecycle.currentState = Lifecycle.State.DESTROYED
+        lifecycleOwner.destroy()
         channel.setMethodCallHandler(null)
         composeView.disposeComposition()
         recomposer.close()
@@ -186,6 +182,24 @@ internal class VideoPlayerPlatformView(
         "isClosed" to closed,
         "lastFailure" to null,
     )
+}
+
+private class PlatformViewLifecycleOwner : SavedStateRegistryOwner {
+    private val savedStateController = SavedStateRegistryController.create(this)
+
+    override val lifecycle = LifecycleRegistry(this)
+    override val savedStateRegistry get() = savedStateController.savedStateRegistry
+
+    init {
+        savedStateController.performAttach()
+        savedStateController.performRestore(Bundle())
+        lifecycle.currentState = Lifecycle.State.CREATED
+        lifecycle.currentState = Lifecycle.State.RESUMED
+    }
+
+    fun destroy() {
+        lifecycle.currentState = Lifecycle.State.DESTROYED
+    }
 }
 
 private fun Map<String, Any?>.source(): VideoSource? {
