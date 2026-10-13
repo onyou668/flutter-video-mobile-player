@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 enum VideoPlayerEngine { media3, ijk }
@@ -317,21 +319,39 @@ class _VideoMobilePlayerState extends State<VideoMobilePlayer> {
         ),
       );
     }
+    final creationParams = <String, Object?>{
+      ...widget.source.toMap(),
+      'autoPlay': widget.autoPlay,
+      'startPositionMs': widget.startPosition.inMilliseconds,
+      'engine': widget.initialEngine.name,
+      'startupMode': widget.startupMode.name,
+      'showEngineSwitcher': widget.showEngineSwitcher,
+      'showNetworkSpeedWhileLoading': widget.showNetworkSpeedWhileLoading,
+    };
     return AspectRatio(
       aspectRatio: widget.aspectRatio,
-      child: AndroidView(
+      child: PlatformViewLink(
         viewType: 'io.github.onyou668/video_mobile_player',
-        creationParams: <String, Object?>{
-          ...widget.source.toMap(),
-          'autoPlay': widget.autoPlay,
-          'startPositionMs': widget.startPosition.inMilliseconds,
-          'engine': widget.initialEngine.name,
-          'startupMode': widget.startupMode.name,
-          'showEngineSwitcher': widget.showEngineSwitcher,
-          'showNetworkSpeedWhileLoading': widget.showNetworkSpeedWhileLoading,
+        surfaceFactory: (context, controller) => AndroidViewSurface(
+          controller: controller as AndroidViewController,
+          gestureRecognizers: const <Factory<OneSequenceGestureRecognizer>>{},
+          hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+        ),
+        onCreatePlatformView: (params) {
+          final controller = PlatformViewsService.initExpensiveAndroidView(
+            id: params.id,
+            viewType: params.viewType,
+            layoutDirection: TextDirection.ltr,
+            creationParams: creationParams,
+            creationParamsCodec: const StandardMessageCodec(),
+            onFocus: null,
+          );
+          controller.addOnPlatformViewCreatedListener(
+            widget.controller._attach,
+          );
+          controller.create();
+          return controller;
         },
-        creationParamsCodec: const StandardMessageCodec(),
-        onPlatformViewCreated: widget.controller._attach,
       ),
     );
   }

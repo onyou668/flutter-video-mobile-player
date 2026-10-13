@@ -13,8 +13,8 @@ class PlayerExampleApp extends StatefulWidget {
 class _PlayerExampleAppState extends State<PlayerExampleApp> {
   final controller = VideoMobilePlayerController();
   static const source = VideoPlayerSource.network(
-    'https://www.w3schools.com/html/mov_bbb.mp4',
-    title: 'Sample video',
+    'https://media.w3.org/2010/05/sintel/trailer.mp4',
+    title: 'Sintel trailer',
     contentCachePolicy: VideoContentCachePolicy.disabled,
   );
 

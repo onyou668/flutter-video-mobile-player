@@ -5,15 +5,18 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.os.Build
 import android.view.View
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Recomposer
-import androidx.compose.ui.platform.ComposeView
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.AndroidUiDispatcher
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -42,9 +45,12 @@ internal class VideoPlayerPlatformView(
     cache: VideoContentCache,
 ) : PlatformView, MethodChannel.MethodCallHandler {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val recomposer = Recomposer(AndroidUiDispatcher.Main + scope.coroutineContext)
-    private val lifecycleOwner = object : LifecycleOwner {
+    // Keep AndroidUiDispatcher last so its dispatcher and frame clock are retained.
+    private val recomposer = Recomposer(scope.coroutineContext + AndroidUiDispatcher.Main)
+    private val lifecycleOwner = object : SavedStateRegistryOwner {
         override val lifecycle = LifecycleRegistry(this)
+        private val savedStateController = SavedStateRegistryController.create(this)
+        override val savedStateRegistry get() = savedStateController.savedStateRegistry
     }
     private val channel = MethodChannel(messenger, "video_mobile_player/view_$viewId")
     private val player: VideoPlayerController = createDefaultVideoPlayerController(
@@ -61,6 +67,7 @@ internal class VideoPlayerPlatformView(
     private val composeView = ComposeView(context).apply {
         // Flutter's texture PlatformView has no AndroidX lifecycle owner in its view tree.
         setViewTreeLifecycleOwner(lifecycleOwner)
+        setViewTreeSavedStateRegistryOwner(lifecycleOwner)
         setParentCompositionContext(recomposer)
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
         setContent {
@@ -75,7 +82,7 @@ internal class VideoPlayerPlatformView(
 
     init {
         lifecycleOwner.lifecycle.currentState = Lifecycle.State.RESUMED
-        scope.launch { recomposer.runRecomposeAndApplyChanges() }
+        scope.launch(AndroidUiDispatcher.Main) { recomposer.runRecomposeAndApplyChanges() }
         channel.setMethodCallHandler(this)
         creationParams.source()?.let { source ->
             player.setMedia(
