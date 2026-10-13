@@ -38,4 +38,9 @@ void main() {
     expect(source.toMap().containsKey('mediaId'), isFalse);
     expect(source.toMap()['contentCachePolicy'], 'auto');
   });
+
+  test('serializes a caller supplied start position separately from source identity', () {
+    const source = VideoPlayerSource.network('https://example.com/video.mp4');
+    expect(source.toMap().containsKey('mediaId'), isFalse);
+  });
 }

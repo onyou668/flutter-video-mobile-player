@@ -13,8 +13,9 @@ class PlayerExampleApp extends StatefulWidget {
 class _PlayerExampleAppState extends State<PlayerExampleApp> {
   final controller = VideoMobilePlayerController();
   static const source = VideoPlayerSource.network(
-    'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    title: 'Big Buck Bunny',
+    'https://www.w3schools.com/html/mov_bbb.mp4',
+    title: 'Sample video',
+    contentCachePolicy: VideoContentCachePolicy.disabled,
   );
 
   @override

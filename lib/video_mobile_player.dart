@@ -182,11 +182,15 @@ class VideoMobilePlayerController {
   Future<void> switchEngine(VideoPlayerEngine engine) =>
       _invoke('switchEngine', <String, Object>{'engine': engine.name});
 
-  Future<void> setSource(VideoPlayerSource source, {bool autoPlay = true}) =>
-      _invoke('setSource', <String, Object?>{
-        ...source.toMap(),
-        'autoPlay': autoPlay,
-      });
+  Future<void> setSource(
+    VideoPlayerSource source, {
+    bool autoPlay = true,
+    Duration startPosition = Duration.zero,
+  }) => _invoke('setSource', <String, Object?>{
+    ...source.toMap(),
+    'autoPlay': autoPlay,
+    'startPositionMs': startPosition.inMilliseconds,
+  });
 
   Future<bool> requestMode(VideoPresentationMode mode) async =>
       await _invoke<bool>('requestMode', <String, Object>{'mode': mode.name}) ??
@@ -265,11 +269,11 @@ class VideoMobilePlayer extends StatefulWidget {
     required this.source,
     required this.controller,
     this.autoPlay = true,
+    this.startPosition = Duration.zero,
     this.aspectRatio = 16 / 9,
     this.initialEngine = VideoPlayerEngine.media3,
     this.startupMode = VideoPresentationMode.inline,
     this.showEngineSwitcher = true,
-    this.showPresentationControls = true,
     this.showNetworkSpeedWhileLoading = true,
     super.key,
   });
@@ -277,11 +281,11 @@ class VideoMobilePlayer extends StatefulWidget {
   final VideoPlayerSource source;
   final VideoMobilePlayerController controller;
   final bool autoPlay;
+  final Duration startPosition;
   final double aspectRatio;
   final VideoPlayerEngine initialEngine;
   final VideoPresentationMode startupMode;
   final bool showEngineSwitcher;
-  final bool showPresentationControls;
   final bool showNetworkSpeedWhileLoading;
 
   @override
@@ -293,8 +297,13 @@ class _VideoMobilePlayerState extends State<VideoMobilePlayer> {
   void didUpdateWidget(VideoMobilePlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source ||
-        oldWidget.autoPlay != widget.autoPlay) {
-      widget.controller.setSource(widget.source, autoPlay: widget.autoPlay);
+        oldWidget.autoPlay != widget.autoPlay ||
+        oldWidget.startPosition != widget.startPosition) {
+      widget.controller.setSource(
+        widget.source,
+        autoPlay: widget.autoPlay,
+        startPosition: widget.startPosition,
+      );
     }
   }
 
@@ -315,10 +324,10 @@ class _VideoMobilePlayerState extends State<VideoMobilePlayer> {
         creationParams: <String, Object?>{
           ...widget.source.toMap(),
           'autoPlay': widget.autoPlay,
+          'startPositionMs': widget.startPosition.inMilliseconds,
           'engine': widget.initialEngine.name,
           'startupMode': widget.startupMode.name,
           'showEngineSwitcher': widget.showEngineSwitcher,
-          'showPresentationControls': widget.showPresentationControls,
           'showNetworkSpeedWhileLoading': widget.showNetworkSpeedWhileLoading,
         },
         creationParamsCodec: const StandardMessageCodec(),

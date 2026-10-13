@@ -1,8 +1,8 @@
-## 0.3.0
+## 0.4.0
 
-* Generate stable media identity and restore playback progress inside the Android player.
-* Remove caller-supplied media IDs and start positions from the Dart interface.
-* Give the embedded player a configurable 16:9 adaptive aspect ratio by default.
+* Adapt the plugin to the controlled portrait/landscape Android player API.
+* Restore caller-controlled start positions and remove obsolete presentation API usage.
+* Update the Android submodule to the latest main commit.
 
 ## 0.2.0
 
